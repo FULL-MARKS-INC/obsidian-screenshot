@@ -37,10 +37,13 @@ export class BrowserSessionManager {
 			throw new Error('No active browser session to close.');
 		}
 
-		await this.browser.close();
-		this.browser = null;
-		this.context = null;
-		this.page = null;
+		try {
+			await this.browser.close();
+		} finally {
+			this.browser = null;
+			this.context = null;
+			this.page = null;
+		}
 	}
 
 	hasActiveSession(): boolean {

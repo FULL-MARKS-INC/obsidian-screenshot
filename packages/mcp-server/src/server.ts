@@ -1,7 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { BrowserSessionManager } from './browser.js';
 
-export function createServer(): McpServer {
+export interface ServerWithCleanup {
+	server: McpServer;
+	browserManager: BrowserSessionManager;
+}
+
+export function createServer(): ServerWithCleanup {
 	const server = new McpServer(
 		{
 			name: 'obsidian-screenshot-mcp',
@@ -112,5 +117,5 @@ export function createServer(): McpServer {
 		}
 	);
 
-	return server;
+	return { server, browserManager };
 }
