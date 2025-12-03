@@ -13,6 +13,24 @@ export interface OperationResult {
 	error?: string;
 }
 
+interface TextContent {
+	type: 'text';
+	text: string;
+}
+
+interface ImageContent {
+	type: 'image';
+	data: string;
+	mimeType: string;
+}
+
+type ContentItem = TextContent | ImageContent | { type: string };
+
+interface ToolResultWithContent {
+	content: ContentItem[];
+	isError?: boolean;
+}
+
 export class MCPClient {
 	private client: Client | null = null;
 	private transport: StdioClientTransport | null = null;
@@ -87,15 +105,15 @@ export class MCPClient {
 		}
 
 		try {
-			const result = await this.client.callTool({
+			const rawResult = await this.client.callTool({
 				name: 'browser_launch',
 				arguments: {},
 			});
 
-			if ('isError' in result && result.isError) {
-				const errorContent = result.content.find(
-					(c): c is { type: 'text'; text: string } => c.type === 'text'
-				);
+			const result = rawResult as ToolResultWithContent;
+
+			if (result.isError) {
+				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');
 				return {
 					success: false,
 					message: 'Failed to launch browser',
@@ -103,9 +121,7 @@ export class MCPClient {
 				};
 			}
 
-			const textContent = result.content.find(
-				(c): c is { type: 'text'; text: string } => c.type === 'text'
-			);
+			const textContent = result.content.find((c): c is TextContent => c.type === 'text');
 			return {
 				success: true,
 				message: textContent?.text || 'Browser launched successfully',
@@ -129,24 +145,22 @@ export class MCPClient {
 		}
 
 		try {
-			const result = await this.client.callTool({
+			const rawResult = await this.client.callTool({
 				name: 'browser_capture',
 				arguments: {},
 			});
 
-			if ('isError' in result && result.isError) {
-				const errorContent = result.content.find(
-					(c): c is { type: 'text'; text: string } => c.type === 'text'
-				);
+			const result = rawResult as ToolResultWithContent;
+
+			if (result.isError) {
+				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');
 				return {
 					success: false,
 					error: errorContent?.text || 'Unknown error',
 				};
 			}
 
-			const imageContent = result.content.find(
-				(c): c is { type: 'image'; data: string; mimeType: string } => c.type === 'image'
-			);
+			const imageContent = result.content.find((c): c is ImageContent => c.type === 'image');
 
 			if (imageContent) {
 				return {
@@ -178,15 +192,15 @@ export class MCPClient {
 		}
 
 		try {
-			const result = await this.client.callTool({
+			const rawResult = await this.client.callTool({
 				name: 'browser_close',
 				arguments: {},
 			});
 
-			if ('isError' in result && result.isError) {
-				const errorContent = result.content.find(
-					(c): c is { type: 'text'; text: string } => c.type === 'text'
-				);
+			const result = rawResult as ToolResultWithContent;
+
+			if (result.isError) {
+				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');
 				return {
 					success: false,
 					message: 'Failed to close browser',
@@ -194,9 +208,7 @@ export class MCPClient {
 				};
 			}
 
-			const textContent = result.content.find(
-				(c): c is { type: 'text'; text: string } => c.type === 'text'
-			);
+			const textContent = result.content.find((c): c is TextContent => c.type === 'text');
 			return {
 				success: true,
 				message: textContent?.text || 'Browser closed successfully',
