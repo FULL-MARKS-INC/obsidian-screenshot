@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-screenshot",
+	"name": "Obsidian Screenshot",
+	"version": "0.1.0",
+	"minAppVersion": "1.0.0",
+	"description": "Capture browser screenshots directly from Obsidian notes using Playwright automation",
+	"author": "FULL-MARKS-INC",
+	"authorUrl": "https://github.com/FULL-MARKS-INC",
+	"isDesktopOnly": true
+}
