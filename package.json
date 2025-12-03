@@ -4,9 +4,13 @@
 	"description": "Capture browser screenshots directly from Obsidian notes using Playwright automation",
 	"main": "main.js",
 	"type": "module",
+	"workspaces": [
+		"packages/*"
+	],
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build:mcp-server": "npm run build -w packages/mcp-server",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write \"**/*.{ts,json,md}\"",
