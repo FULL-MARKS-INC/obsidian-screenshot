@@ -38,7 +38,11 @@ export default class BrowserCapturePlugin extends Plugin {
 
 	async onunload(): Promise<void> {
 		if (this.mcpClient) {
-			await this.mcpClient.disconnect();
+			try {
+				await this.mcpClient.disconnect();
+			} catch (error) {
+				console.error('Failed to disconnect MCP client during unload:', error);
+			}
 		}
 		console.log('Browser Capture plugin unloaded');
 	}
@@ -48,9 +52,12 @@ export default class BrowserCapturePlugin extends Plugin {
 	}
 
 	async saveSettings(): Promise<void> {
+		const oldSettings = (await this.loadData()) as BrowserCaptureSettings | null;
+		const commandChanged = this.settings.mcpServerCommand !== oldSettings?.mcpServerCommand;
+
 		await this.saveData(this.settings);
 
-		if (this.mcpClient) {
+		if (commandChanged && this.mcpClient) {
 			await this.mcpClient.disconnect();
 			this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
 		}

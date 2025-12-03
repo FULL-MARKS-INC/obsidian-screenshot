@@ -31,6 +31,15 @@ interface ToolResultWithContent {
 	isError?: boolean;
 }
 
+function isToolResultWithContent(result: unknown): result is ToolResultWithContent {
+	return (
+		typeof result === 'object' &&
+		result !== null &&
+		'content' in result &&
+		Array.isArray((result as ToolResultWithContent).content)
+	);
+}
+
 export class MCPClient {
 	private client: Client | null = null;
 	private transport: StdioClientTransport | null = null;
@@ -82,8 +91,8 @@ export class MCPClient {
 		if (this.client) {
 			try {
 				await this.client.close();
-			} catch {
-				// Ignore errors during disconnect
+			} catch (error) {
+				console.error('Error during MCP disconnect:', error);
 			}
 		}
 		this.client = null;
@@ -110,7 +119,15 @@ export class MCPClient {
 				arguments: {},
 			});
 
-			const result = rawResult as ToolResultWithContent;
+			if (!isToolResultWithContent(rawResult)) {
+				return {
+					success: false,
+					message: 'Failed to launch browser',
+					error: 'Unexpected MCP response format',
+				};
+			}
+
+			const result = rawResult;
 
 			if (result.isError) {
 				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');
@@ -150,7 +167,14 @@ export class MCPClient {
 				arguments: {},
 			});
 
-			const result = rawResult as ToolResultWithContent;
+			if (!isToolResultWithContent(rawResult)) {
+				return {
+					success: false,
+					error: 'Unexpected MCP response format',
+				};
+			}
+
+			const result = rawResult;
 
 			if (result.isError) {
 				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');
@@ -197,7 +221,15 @@ export class MCPClient {
 				arguments: {},
 			});
 
-			const result = rawResult as ToolResultWithContent;
+			if (!isToolResultWithContent(rawResult)) {
+				return {
+					success: false,
+					message: 'Failed to close browser',
+					error: 'Unexpected MCP response format',
+				};
+			}
+
+			const result = rawResult;
 
 			if (result.isError) {
 				const errorContent = result.content.find((c): c is TextContent => c.type === 'text');

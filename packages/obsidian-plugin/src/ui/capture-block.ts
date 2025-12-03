@@ -152,30 +152,21 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 			const content = await this.app.vault.read(activeFile);
 			const lines = content.split('\n');
 
-			const codeBlockPattern = /```browser-capture\s*```/;
-			let insertLineIndex = -1;
-
+			let blockStartIndex = -1;
 			for (let i = 0; i < lines.length; i++) {
-				if (codeBlockPattern.test(lines[i])) {
-					insertLineIndex = i;
+				if (lines[i].trim() === '```browser-capture') {
+					blockStartIndex = i;
 					break;
 				}
 			}
 
-			if (insertLineIndex === -1) {
-				for (let i = 0; i < lines.length; i++) {
-					if (lines[i].includes('```browser-capture')) {
-						insertLineIndex = i;
-						break;
-					}
-				}
-			}
-
-			if (insertLineIndex !== -1) {
+			if (blockStartIndex !== -1) {
 				const imageLink = `![[${imagePath}]]`;
-				lines.splice(insertLineIndex, 0, imageLink, '');
+				lines.splice(blockStartIndex, 0, imageLink, '');
 				const newContent = lines.join('\n');
 				await this.app.vault.modify(activeFile, newContent);
+			} else {
+				new Notice('Could not find browser-capture code block');
 			}
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
