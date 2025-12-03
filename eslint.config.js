@@ -17,6 +17,10 @@ export default [
 				window: 'readonly',
 				document: 'readonly',
 				process: 'readonly',
+				HTMLElement: 'readonly',
+				atob: 'readonly',
+				Uint8Array: 'readonly',
+				ArrayBuffer: 'readonly',
 			},
 		},
 		plugins: {
