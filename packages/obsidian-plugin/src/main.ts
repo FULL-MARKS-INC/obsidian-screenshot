@@ -1,4 +1,6 @@
 import { Editor, Plugin } from 'obsidian';
+import * as fs from 'fs';
+import * as path from 'path';
 import { BrowserCaptureSettings, BrowserCaptureSettingTab, DEFAULT_SETTINGS } from './settings';
 import { MCPClient } from './mcp-client';
 import { CaptureBlockRenderer } from './ui/capture-block';
@@ -9,6 +11,16 @@ export default class BrowserCapturePlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+
+		// Auto-detect node path if using default command (without full path)
+		if (!this.settings.mcpServerCommand.includes('/')) {
+			const nodePath = await this.detectNodePath();
+			if (nodePath) {
+				this.settings.mcpServerCommand = `${nodePath} ${this.settings.mcpServerCommand}`;
+				await this.saveData(this.settings);
+				console.log(`Using Node.js at: ${nodePath}`);
+			}
+		}
 
 		this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
 
@@ -61,6 +73,41 @@ export default class BrowserCapturePlugin extends Plugin {
 			await this.mcpClient.disconnect();
 			this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
 		}
+	}
+
+	private async detectNodePath(): Promise<string | null> {
+		// Try common Node.js installation paths
+		const commonPaths = ['/usr/local/bin/node', '/opt/homebrew/bin/node', '/usr/bin/node'];
+
+		for (const nodePath of commonPaths) {
+			if (fs.existsSync(nodePath)) {
+				return nodePath;
+			}
+		}
+
+		// Check nvm installations
+		const homeDir = process.env.HOME || process.env.USERPROFILE;
+		if (homeDir) {
+			const nvmDir = path.join(homeDir, '.nvm', 'versions', 'node');
+			if (fs.existsSync(nvmDir)) {
+				try {
+					const versions = fs.readdirSync(nvmDir);
+					if (versions.length > 0) {
+						// Use the latest version (sort by version number)
+						versions.sort().reverse();
+						const latestVersion = versions[0];
+						const nvmNodePath = path.join(nvmDir, latestVersion, 'bin', 'node');
+						if (fs.existsSync(nvmNodePath)) {
+							return nvmNodePath;
+						}
+					}
+				} catch (error) {
+					console.error('Error detecting nvm node path:', error);
+				}
+			}
+		}
+
+		return null;
 	}
 
 	private insertCaptureBlock(editor: Editor): void {
