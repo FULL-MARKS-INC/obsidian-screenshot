@@ -7,6 +7,10 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 	private mcpClient: MCPClient;
 	private settings: BrowserCaptureSettings;
 	private sourcePath: string;
+	private launchButton!: HTMLButtonElement;
+	private captureButton!: HTMLButtonElement;
+	private closeButton!: HTMLButtonElement;
+	private browserActive = false;
 
 	constructor(
 		containerEl: HTMLElement,
@@ -39,23 +43,54 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 		container.style.marginTop = '8px';
 		container.style.marginBottom = '8px';
 
-		const launchButton = container.createEl('button', {
-			text: 'Launch Browser',
+		// Launch Browser button
+		this.launchButton = container.createEl('button', {
+			text: '🌐',
 			cls: 'browser-capture-button browser-capture-launch',
 		});
-		launchButton.addEventListener('click', () => this.handleLaunch());
+		this.launchButton.setAttribute('aria-label', 'Launch Browser');
+		this.launchButton.addEventListener('click', () => this.handleLaunch());
 
-		const captureButton = container.createEl('button', {
-			text: 'Capture',
+		// Capture button
+		this.captureButton = container.createEl('button', {
+			text: '📸',
 			cls: 'browser-capture-button browser-capture-capture',
 		});
-		captureButton.addEventListener('click', () => this.handleCapture());
+		this.captureButton.setAttribute('aria-label', 'Capture Screenshot');
+		this.captureButton.addEventListener('click', () => this.handleCapture());
 
-		const closeButton = container.createEl('button', {
-			text: 'Close Browser',
+		// Close Browser button
+		this.closeButton = container.createEl('button', {
+			text: '⏹️',
 			cls: 'browser-capture-button browser-capture-close',
 		});
-		closeButton.addEventListener('click', () => this.handleClose());
+		this.closeButton.setAttribute('aria-label', 'Close Browser');
+		this.closeButton.addEventListener('click', () => this.handleClose());
+
+		// Set initial button states
+		this.updateButtonStates();
+	}
+
+	private updateButtonStates(): void {
+		if (this.browserActive) {
+			// Browser is running: disable launch, enable capture/close
+			this.launchButton.disabled = true;
+			this.captureButton.disabled = false;
+			this.closeButton.disabled = false;
+
+			this.launchButton.style.opacity = '0.5';
+			this.captureButton.style.opacity = '1';
+			this.closeButton.style.opacity = '1';
+		} else {
+			// Browser is stopped: enable launch, disable capture/close
+			this.launchButton.disabled = false;
+			this.captureButton.disabled = true;
+			this.closeButton.disabled = true;
+
+			this.launchButton.style.opacity = '1';
+			this.captureButton.style.opacity = '0.5';
+			this.closeButton.style.opacity = '0.5';
+		}
 	}
 
 	private async handleLaunch(): Promise<void> {
@@ -69,6 +104,8 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 
 		const result = await this.mcpClient.launchBrowser();
 		if (result.success) {
+			this.browserActive = true;
+			this.updateButtonStates();
 			new Notice(result.message);
 		} else {
 			new Notice(`Failed to launch browser: ${result.error}`);
@@ -101,6 +138,8 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 
 		const result = await this.mcpClient.closeBrowser();
 		if (result.success) {
+			this.browserActive = false;
+			this.updateButtonStates();
 			new Notice(result.message);
 		} else {
 			new Notice(`Failed to close browser: ${result.error}`);
