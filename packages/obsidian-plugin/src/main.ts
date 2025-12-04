@@ -83,29 +83,38 @@ export default class BrowserCapturePlugin extends Plugin {
 			return null;
 		}
 
-		// The MCP server CLI should be in the same bin directory as Node
 		const binDir = path.dirname(nodePath);
-		const cliPath = path.join(binDir, commandName);
+		const prefix = path.resolve(binDir, '..');
 
-		if (fs.existsSync(cliPath)) {
-			const fullCommand = `${nodePath} ${cliPath}`;
-			console.log(`Auto-detected MCP server: ${fullCommand}`);
-			return fullCommand;
-		}
-
-		// Fallback: check lib/node_modules for the actual script
-		const libPath = path.resolve(
-			binDir,
-			'..',
+		// 1. Check scoped package path first (for npm link with @obsidian-screenshot/mcp-server)
+		const scopedLibPath = path.join(
+			prefix,
 			'lib',
 			'node_modules',
-			commandName,
+			'@obsidian-screenshot',
+			'mcp-server',
 			'dist',
 			'index.js'
 		);
+		if (fs.existsSync(scopedLibPath)) {
+			const fullCommand = `${nodePath} ${scopedLibPath}`;
+			console.log(`Auto-detected MCP server (scoped): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// 2. Check non-scoped lib/node_modules path
+		const libPath = path.join(prefix, 'lib', 'node_modules', commandName, 'dist', 'index.js');
 		if (fs.existsSync(libPath)) {
 			const fullCommand = `${nodePath} ${libPath}`;
 			console.log(`Auto-detected MCP server (lib): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// 3. Check CLI script in bin directory
+		const cliPath = path.join(binDir, commandName);
+		if (fs.existsSync(cliPath)) {
+			const fullCommand = `${nodePath} ${cliPath}`;
+			console.log(`Auto-detected MCP server (cli): ${fullCommand}`);
 			return fullCommand;
 		}
 
