@@ -11,6 +11,7 @@
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"build:mcp-server": "npm run build -w packages/mcp-server",
+		"deploy:plugin": "npm run build -w packages/obsidian-plugin && mkdir -p \"$VAULT_PATH/.obsidian/plugins/browser-capture\" && cp packages/obsidian-plugin/dist/main.js packages/obsidian-plugin/manifest.json \"$VAULT_PATH/.obsidian/plugins/browser-capture/\"",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write \"**/*.{ts,json,md}\"",

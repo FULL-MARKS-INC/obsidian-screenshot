@@ -137,11 +137,26 @@ npm install
 | `npm run build`                             | Build all packages (type-check + bundle)  |
 | `npm run build:mcp-server`                  | Build MCP server only                     |
 | `npm run build -w packages/obsidian-plugin` | Build Obsidian plugin only                |
+| `npm run deploy:plugin`                     | Build and deploy plugin to Obsidian vault |
 | `npm run dev`                               | Start development mode with file watching |
 | `npm run lint`                              | Run ESLint on all packages                |
 | `npm run lint:fix`                          | Run ESLint with auto-fix                  |
 | `npm run format`                            | Format code with Prettier                 |
 | `npm run format:check`                      | Check code formatting                     |
+
+### Quick Deploy to Obsidian Vault
+
+The `deploy:plugin` script builds the plugin and copies it directly to your Obsidian vault. Set the `VAULT_PATH` environment variable to your vault's root directory:
+
+```bash
+# Set your vault path (adjust to your environment)
+export VAULT_PATH="/path/to/your/obsidian-vault"
+
+# Build and deploy in one command
+npm run deploy:plugin
+```
+
+You can add the export to your shell profile (`.bashrc`, `.zshrc`, etc.) to make it persistent across terminal sessions.
 
 ### Testing Locally
 
