@@ -10,7 +10,6 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 	private launchButton!: HTMLButtonElement;
 	private captureButton!: HTMLButtonElement;
 	private closeButton!: HTMLButtonElement;
-	private browserActive = false;
 
 	constructor(
 		containerEl: HTMLElement,
@@ -66,31 +65,6 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 		});
 		this.closeButton.setAttribute('aria-label', 'Close Browser');
 		this.closeButton.addEventListener('click', () => this.handleClose());
-
-		// Set initial button states
-		this.updateButtonStates();
-	}
-
-	private updateButtonStates(): void {
-		if (this.browserActive) {
-			// Browser is running: disable launch, enable capture/close
-			this.launchButton.disabled = true;
-			this.captureButton.disabled = false;
-			this.closeButton.disabled = false;
-
-			this.launchButton.style.opacity = '0.5';
-			this.captureButton.style.opacity = '1';
-			this.closeButton.style.opacity = '1';
-		} else {
-			// Browser is stopped: enable launch, disable capture/close
-			this.launchButton.disabled = false;
-			this.captureButton.disabled = true;
-			this.closeButton.disabled = true;
-
-			this.launchButton.style.opacity = '1';
-			this.captureButton.style.opacity = '0.5';
-			this.closeButton.style.opacity = '0.5';
-		}
 	}
 
 	private async handleLaunch(): Promise<void> {
@@ -104,8 +78,6 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 
 		const result = await this.mcpClient.launchBrowser();
 		if (result.success) {
-			this.browserActive = true;
-			this.updateButtonStates();
 			new Notice(result.message);
 		} else {
 			new Notice(`Failed to launch browser: ${result.error}`);
@@ -138,8 +110,6 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 
 		const result = await this.mcpClient.closeBrowser();
 		if (result.success) {
-			this.browserActive = false;
-			this.updateButtonStates();
 			new Notice(result.message);
 		} else {
 			new Notice(`Failed to close browser: ${result.error}`);
