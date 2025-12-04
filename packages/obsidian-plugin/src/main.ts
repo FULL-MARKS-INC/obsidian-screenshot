@@ -12,13 +12,12 @@ export default class BrowserCapturePlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// Auto-detect node path if using default command (without full path)
+		// Auto-detect node and MCP server paths if using default command (without full path)
 		if (!this.settings.mcpServerCommand.includes('/')) {
-			const nodePath = await this.detectNodePath();
-			if (nodePath) {
-				this.settings.mcpServerCommand = `${nodePath} ${this.settings.mcpServerCommand}`;
+			const fullCommand = await this.detectMcpServerCommand();
+			if (fullCommand) {
+				this.settings.mcpServerCommand = fullCommand;
 				await this.saveData(this.settings);
-				console.log(`Using Node.js at: ${nodePath}`);
 			}
 		}
 
@@ -73,6 +72,46 @@ export default class BrowserCapturePlugin extends Plugin {
 			await this.mcpClient.disconnect();
 			this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
 		}
+	}
+
+	private async detectMcpServerCommand(): Promise<string | null> {
+		const commandName = this.settings.mcpServerCommand.trim();
+
+		const nodePath = await this.detectNodePath();
+		if (!nodePath) {
+			console.warn('Could not auto-detect Node.js path');
+			return null;
+		}
+
+		// The MCP server CLI should be in the same bin directory as Node
+		const binDir = path.dirname(nodePath);
+		const cliPath = path.join(binDir, commandName);
+
+		if (fs.existsSync(cliPath)) {
+			const fullCommand = `${nodePath} ${cliPath}`;
+			console.log(`Auto-detected MCP server: ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// Fallback: check lib/node_modules for the actual script
+		const libPath = path.resolve(
+			binDir,
+			'..',
+			'lib',
+			'node_modules',
+			commandName,
+			'dist',
+			'index.js'
+		);
+		if (fs.existsSync(libPath)) {
+			const fullCommand = `${nodePath} ${libPath}`;
+			console.log(`Auto-detected MCP server (lib): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// Last resort: just use node path with command name (may not work)
+		console.warn(`Could not resolve MCP CLI path for ${commandName}; using node path only`);
+		return `${nodePath} ${commandName}`;
 	}
 
 	private async detectNodePath(): Promise<string | null> {
