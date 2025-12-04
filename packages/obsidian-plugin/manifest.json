@@ -1,0 +1,10 @@
+{
+	"id": "browser-capture",
+	"name": "Browser Capture",
+	"version": "0.1.0",
+	"minAppVersion": "1.0.0",
+	"description": "Capture browser screenshots directly from Obsidian notes using MCP server and Playwright automation",
+	"author": "FULL-MARKS-INC",
+	"authorUrl": "https://github.com/FULL-MARKS-INC",
+	"isDesktopOnly": true
+}

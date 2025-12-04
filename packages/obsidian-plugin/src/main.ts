@@ -1,0 +1,172 @@
+import { Editor, Plugin } from 'obsidian';
+import * as fs from 'fs';
+import * as path from 'path';
+import { BrowserCaptureSettings, BrowserCaptureSettingTab, DEFAULT_SETTINGS } from './settings';
+import { MCPClient } from './mcp-client';
+import { CaptureBlockRenderer } from './ui/capture-block';
+
+export default class BrowserCapturePlugin extends Plugin {
+	settings: BrowserCaptureSettings = DEFAULT_SETTINGS;
+	mcpClient: MCPClient | null = null;
+
+	async onload(): Promise<void> {
+		await this.loadSettings();
+
+		// Auto-detect node and MCP server paths if using default command (without full path)
+		if (!this.settings.mcpServerCommand.includes('/')) {
+			const fullCommand = await this.detectMcpServerCommand();
+			if (fullCommand) {
+				this.settings.mcpServerCommand = fullCommand;
+				await this.saveData(this.settings);
+			}
+		}
+
+		this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
+
+		this.addSettingTab(new BrowserCaptureSettingTab(this.app, this));
+
+		this.addCommand({
+			id: 'insert-browser-capture-block',
+			name: 'Insert Browser Capture Button',
+			editorCallback: (editor: Editor) => {
+				this.insertCaptureBlock(editor);
+			},
+		});
+
+		this.registerMarkdownCodeBlockProcessor('browser-capture', (source, el, ctx) => {
+			const renderer = new CaptureBlockRenderer(
+				el,
+				this.app,
+				this.mcpClient!,
+				this.settings,
+				ctx.sourcePath
+			);
+			ctx.addChild(renderer);
+		});
+
+		console.log('Browser Capture plugin loaded');
+	}
+
+	async onunload(): Promise<void> {
+		if (this.mcpClient) {
+			try {
+				await this.mcpClient.disconnect();
+			} catch (error) {
+				console.error('Failed to disconnect MCP client during unload:', error);
+			}
+		}
+		console.log('Browser Capture plugin unloaded');
+	}
+
+	async loadSettings(): Promise<void> {
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	}
+
+	async saveSettings(): Promise<void> {
+		const oldSettings = (await this.loadData()) as BrowserCaptureSettings | null;
+		const commandChanged = this.settings.mcpServerCommand !== oldSettings?.mcpServerCommand;
+
+		await this.saveData(this.settings);
+
+		if (commandChanged && this.mcpClient) {
+			await this.mcpClient.disconnect();
+			this.mcpClient = new MCPClient(this.settings.mcpServerCommand);
+		}
+	}
+
+	private async detectMcpServerCommand(): Promise<string | null> {
+		const commandName = this.settings.mcpServerCommand.trim();
+
+		const nodePath = await this.detectNodePath();
+		if (!nodePath) {
+			console.warn('Could not auto-detect Node.js path');
+			return null;
+		}
+
+		const binDir = path.dirname(nodePath);
+		const prefix = path.resolve(binDir, '..');
+
+		// 1. Check scoped package path first (for npm link with @obsidian-screenshot/mcp-server)
+		const scopedLibPath = path.join(
+			prefix,
+			'lib',
+			'node_modules',
+			'@obsidian-screenshot',
+			'mcp-server',
+			'dist',
+			'index.js'
+		);
+		if (fs.existsSync(scopedLibPath)) {
+			const fullCommand = `${nodePath} ${scopedLibPath}`;
+			console.log(`Auto-detected MCP server (scoped): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// 2. Check non-scoped lib/node_modules path
+		const libPath = path.join(prefix, 'lib', 'node_modules', commandName, 'dist', 'index.js');
+		if (fs.existsSync(libPath)) {
+			const fullCommand = `${nodePath} ${libPath}`;
+			console.log(`Auto-detected MCP server (lib): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// 3. Check CLI script in bin directory
+		const cliPath = path.join(binDir, commandName);
+		if (fs.existsSync(cliPath)) {
+			const fullCommand = `${nodePath} ${cliPath}`;
+			console.log(`Auto-detected MCP server (cli): ${fullCommand}`);
+			return fullCommand;
+		}
+
+		// Last resort: just use node path with command name (may not work)
+		console.warn(`Could not resolve MCP CLI path for ${commandName}; using node path only`);
+		return `${nodePath} ${commandName}`;
+	}
+
+	private async detectNodePath(): Promise<string | null> {
+		// Try common Node.js installation paths
+		const commonPaths = ['/usr/local/bin/node', '/opt/homebrew/bin/node', '/usr/bin/node'];
+
+		for (const nodePath of commonPaths) {
+			if (fs.existsSync(nodePath)) {
+				return nodePath;
+			}
+		}
+
+		// Check nvm installations
+		const homeDir = process.env.HOME || process.env.USERPROFILE;
+		if (homeDir) {
+			const nvmDir = path.join(homeDir, '.nvm', 'versions', 'node');
+			if (fs.existsSync(nvmDir)) {
+				try {
+					const versions = fs.readdirSync(nvmDir);
+					if (versions.length > 0) {
+						// Use the latest version (sort by version number)
+						versions.sort().reverse();
+						const latestVersion = versions[0];
+						const nvmNodePath = path.join(nvmDir, latestVersion, 'bin', 'node');
+						if (fs.existsSync(nvmNodePath)) {
+							return nvmNodePath;
+						}
+					}
+				} catch (error) {
+					console.error('Error detecting nvm node path:', error);
+				}
+			}
+		}
+
+		return null;
+	}
+
+	private insertCaptureBlock(editor: Editor): void {
+		const cursor = editor.getCursor();
+		const codeBlock = '```browser-capture\n```\n';
+		editor.replaceRange(codeBlock, cursor);
+
+		const newCursor = {
+			line: cursor.line + 3,
+			ch: 0,
+		};
+		editor.setCursor(newCursor);
+	}
+}
