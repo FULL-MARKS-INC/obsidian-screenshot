@@ -170,7 +170,7 @@ export class CaptureBlockRenderer extends MarkdownRenderChild {
 			}
 
 			if (blockStartIndex !== -1) {
-				const imageLink = `![[${imagePath}]]`;
+				const imageLink = `![画面キャプチャ](/${imagePath})`;
 				lines.splice(blockStartIndex, 0, imageLink, '');
 				const newContent = lines.join('\n');
 				await this.app.vault.modify(activeFile, newContent);
